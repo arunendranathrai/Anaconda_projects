@@ -1,0 +1,1887 @@
+Revenue:
+ARPU
+ARPPU
+Operating Cost
+DAU
+MAU
+DAU/MAU
+Churn rate
+Retention rate
+Growth rate
+Attrition Rate
+Cost per Install
+Life Time Value/User
+K-factor
+Chrashes per Day
+Load Time
+User Error rate
+Test Performed
+
+Logistic Regression
+##
+# 
+# library(MASS)
+# library("car")
+# # install.packages("magrittr")
+# library(magrittr)
+
+set.seed(56)
+
+setwd("D:/Google/07-23-2020 Next Gen/Working/01-18-2021 Correlation/Input Output files")
+df0 = read.csv(file = "Parent_Imagery 2.0.csv", header = TRUE, sep = ",")
+df = df0
+# df = filter(df0, Brand == "YouTube ")
+# df = filter(df, Wave == "Q2 2020")
+
+df1 = subset(df, select=-c(Respondent_Serial,
+                           Brand,
+                           Weight,
+                           COUNTRY10,
+                           
+                           PII_COMPANY_NAME_OE,
+                           PII_COMPANY_NAME_OTHER_961,
+                           Total_Google_SoW,
+                           # Binary_Total_Google_SoW,
+                           
+                           BIZ_PARENT_SALESREP,
+                           BIZ_PARENT_SALESREP2,
+                           PII
+))
+
+# df1 <- sapply(df1,as.factor)
+df3 <- as.data.frame(df1)
+df2 <- as.data.frame(df1)
+# x = as.data.frame(sapply(df2, class))
+# str(df2)
+
+# Daily_Matrix <- hetcor(df2)
+# #View(df2)
+# Daily_Matrix1 <- as.data.frame(Daily_Matrix$correlations)
+# write.csv(Daily_Matrix1, file = "Polychor result.csv")
+
+##################################################################################
+
+set.seed(56)
+
+
+# blank model
+logr<-glm(Binary_Total_Google_SoW~1,data=df2,family="binomial")
+summary(logr)
+
+# model selection
+step(logr,direction = "both",scope = formula(df2))
+logrstep<-step(logr,direction = "both",scope = formula(df2))
+
+# all variables
+logr<-  glm(formula = Binary_Total_Google_SoW ~ ., family = "binomial", data = df3)
+
+logr <- glm(formula = Binary_Total_Google_SoW ~ PLAT_BRAND_IMAGERY_EASY + 
+              PLAT_BRAND_IMAGERY_PRICE + PLAT_BRAND_IMAGERY_TRANSPARENT + 
+              PLAT_BRAND_IMAGERY_PRIVACY, family = "binomial", data = df2)
+
+summary(logr)
+# install.packages("car")
+library("car")
+vif(logr)
+
+
+#training and testing data
+set.seed(56)
+df3_train_rows <- sample(1:nrow(df3), 0.7*nrow(df3))
+df3_train <- df3[df3_train_rows, ]
+df3_test <- df3[-df3_train_rows, ]
+# View(df3_train)
+
+logr<-  glm(formula = Binary_Total_Google_SoW ~ .,
+            family = "binomial", data = df3_train)
+
+summary(logr)
+
+logr<-glm(Binary_Total_Google_SoW~1,data=df3_train,family="binomial")
+summary(logr)
+
+step(logr,direction = "both",scope = formula(df3_train))
+logrstep<-step(logr,direction = "both",scope = formula(df3_train))
+
+warnings()
+
+logr<-   glm(formula = Binary_Total_Google_SoW ~ PLAT_BRAND_IMAGERY_CONTENT + 
+               PLAT_BRAND_IMAGERY_EFFCTAWRE + PLAT_BRAND_IMAGERY_EASY + 
+               PLAT_BRAND_IMAGERY_PRICE, family = "binomial", data = df3_train)
+
+summary(logr)
+
+vif(logr)
+
+predicted <- predict(logr, df3_test, type="response")
+
+optCutOff <- optimalCutoff(df3_test$Binary_Total_Google_SoW, predicted)[1]
+
+misClassError(df3_test$Binary_Total_Google_SoW, predicted, threshold = optCutOff)
+
+View(df3_test) 
+
+
+plotROC(df3_test$Binary_Total_Google_SoW, predicted)
+
+Concordance(df3_test$Binary_Total_Google_SoW, predicted)
+
+confusionMatrix(df3_test$Binary_Total_Google_SoW, predicted, threshold = optCutOff)
+
+
+############ Bar Charts ######################
+rm(list=ls())
+setwd("C:/Users/10920/Desktop/Test")
+library(readxl)
+library(ggplot2)
+library(tidyr)
+df<-read_excel("data_sh_bar_chart.xlsx",sheet="data")
+df$Significance<- as.factor(df$Significance)
+str(df)
+df<-df[df$`Brand/Category` == 'Beer'|df$`Brand/Category` == 'Cider'|df$`Brand/Category` == 'Liqueurs'|df$`Brand/Category`=='ddGin over 20â¬ per bottle',]
+df<-df[df$Value == 'Never consumed'|df$Value == 'In the past 6 months'|df$Value == 'In the past 3 months',]
+
+# ggplot(df, aes(x=`Brand/Category`,y=`Weight divided by Base`, fill=Value)) + 
+#   geom_bar(aes(fill = Value), position = "dodge",stat = "identity")+
+#   geom_text(aes(label=`Weight divided by Base`*100),stat='identity',position=position_dodge(1.0),size=2)+
+#   theme_minimal()
+# 
+# ggplot(df, aes(x=`Brand/Category`,y=`Weight divided by Base`, fill=Value)) + 
+#   geom_bar(aes(fill = Value), position = "dodge",stat = "identity")+
+#   geom_label(data = df, aes(x=`Brand/Category`,y=`Weight divided by Base`, label = `Weight divided by Base`,color = Significance),stat = "identity",position=position_dodge(1.0),size=2) +
+#   scale_color_manual(values = c("1" = "green", "0" = "black", "-1" = "red"),guide = "none")
+
+
+
+# #Horizontal
+# ggplot(df, aes(x=`Brand/Category`,y=`Weight divided by Base`, fill=Value)) + 
+#   geom_bar(aes(fill = Value), position = "dodge",stat = "identity")+
+#   geom_label(data = df, aes(x=`Brand/Category`,y=`Weight divided by Base`, label = `Weight divided by Base`,color = Significance,group=NULL),stat = "identity",position=position_dodge(width = 0.5),size=2,vjust=0.1) +
+#   scale_color_manual(values = c("1" = "green", "0" = "black", "-1" = "red"),guide = "none") +
+#   theme_bw(base_size=8) +
+#   theme(axis.text.y=element_text(hjust = 0)) +guides(size=FALSE)+ coord_flip()
+
+#Vertical without conditional formatting
+ggplot(df, aes(x=`Brand/Category`,y=`Weight divided by Base`, fill=Value)) + 
+  geom_bar(aes(fill = Value), position = "dodge",stat = "identity")+
+  geom_label(data = df, aes(x=`Brand/Category`,y=`Weight divided by Base`, label = `Weight divided by Base`),stat = "identity",position=position_dodge(width = 1),size=2,vjust=0) +
+  theme_bw(base_size=8) +
+  theme(axis.text.y=element_text(hjust = 0)) +guides(size=FALSE)
+
+#Vertical with conditional 
+ggplot(df, aes(x=`Brand/Category`,y=`Weight divided by Base`, fill=Value)) + 
+  geom_bar(aes(fill = Value), position = "dodge",stat = "identity")+
+  geom_label(data = df, aes(x=`Brand/Category`,y=`Weight divided by Base`, label = `Weight divided by Base`,color = Significance,group=NULL),stat = "identity",position=position_dodge(width = 1),size=2,vjust=0.1) +
+  scale_color_manual(values = c("1" = "green", "0" = "black", "-1" = "red"),guide = "none") +
+  theme_bw(base_size=8) +
+  theme(axis.text.y=element_text(hjust = 0)) +guides(size=FALSE)
+
+
+ggplot(df) + 
+   geom_bar(
+        aes(x=`Brand/Category`,y=`Weight divided by Base`, fill=Value), 
+         stat='identity', position = 'dodge'
+       ) +
+    geom_text(
+         aes(x=`Brand/Category`,y=`Weight divided by Base`, label = `Weight divided by Base`, fill=Value, color = Significance,group=NULL),
+         position = position_dodge(width = 1),
+         vjust = -0.5, size = 3,
+         inherit.aes = TRUE
+         
+         ) + scale_color_manual(values = c("1" = "green", "0" = "black", "-1" = "red"),guide = "none")+
+  theme_bw(base_size=8)+
+     theme(axis.text.y=element_text(hjust = 0)) +guides(size=TRUE)
+
+################ DA ###############################
+
+rm(list =ls())
+library(relaimpo)
+#Packages <- c("plyr", "dplyr", "tidyr", "bnlearn", "reshape", "bnviewer")
+
+ #lapply(Packages, library, character.only = TRUE)
+library(dplyr) 
+library(DataCombine)
+library(psych)
+library(MASS)
+library(car)
+library(magrittr)
+library(InformationValue)
+library(dominanceanalysis)
+library(DescTools)
+
+setwd("C:/Users/10920/Desktop/Google/DA")
+df0 = read.csv(file = "US_Brand_Image_data.csv", header = TRUE, sep = ",")
+
+
+
+
+
+
+df11 = filter(df0)
+df111 = subset(df11, select=-c(ï..Respondent_Serial,
+                            PII_COMPANY_NAME_OE,
+                            PII_COMPANY_NAME_OTHER_961,
+                            PII,
+                            Weight,
+                            Brand,
+                            PLAT_ESSN_SALES,
+                            PLAT_ESSN_AWARE,
+                            BINARY_PLAT_ESSN_SALES
+                            
+))
+
+daData <- df111[,c(
+  "BINARY_PLAT_ESSN_AWARE",
+  "ENGAGE",
+  "TRUST",
+  "CONTENT",
+  "REACH",
+  "REPTOOLS",
+  "ROI",
+  "EASY",
+  "ADFRAUD",
+  "PRIVACY",
+  "TRANSPARENT",
+  "CREATIVE",
+  "PRICE",
+  "EFFCTAWRE",
+  "EFFCTCNVT")]
+
+
+# raw relative importance
+model1_raw <- calc.relimp(daData, type ="genizi")
+# re-proportioned
+model1_prop <- calc.relimp(daData, type ="genizi", rela=TRUE)
+# data frame of results
+results <- cbind(model1_raw$genizi,model1_prop$genizi)
+# save or copy to report.
+temp_result_file_name<-paste("Dominance_", "Market_binary",".csv")
+# View(results)
+write.csv(results, temp_result_file_name)
+
+
+
+Brand_list<-list("Google Search","YouTube","Facebook","Instagram","Amazon","Broadcast TV","Hulu")
+
+
+
+
+
+
+for (i in Brand_list) {
+  
+  df = filter(df0, Brand == i)
+  
+  df1 = subset(df, select=-c(ï..Respondent_Serial,
+                              PII_COMPANY_NAME_OE,
+                              PII_COMPANY_NAME_OTHER_961,
+                              PII,
+                              Weight,
+                              Brand,
+                              PLAT_ESSN_SALES,
+                              PLAT_ESSN_AWARE,
+                              BINARY_PLAT_ESSN_SALES
+                             
+  ))
+  
+  daData <- df1[,c(
+                    "BINARY_PLAT_ESSN_AWARE",
+                    "ENGAGE",
+                    "TRUST",
+                    "CONTENT",
+                    "REACH",
+                    "REPTOOLS",
+                    "ROI",
+                    "EASY",
+                    "ADFRAUD",
+                    "PRIVACY",
+                    "TRANSPARENT",
+                    "CREATIVE",
+                    "PRICE",
+                    "EFFCTAWRE",
+                    "EFFCTCNVT")]
+  
+  
+  # raw relative importance
+  model1_raw <- calc.relimp(daData, type ="genizi")
+  # re-proportioned
+  model1_prop <- calc.relimp(daData, type ="genizi", rela=TRUE)
+  # data frame of results
+  results <- cbind(model1_raw$genizi,model1_prop$genizi)
+  # save or copy to report.
+  temp_result_file_name<-paste("Dominance_", i,"_binary.csv")
+  # View(results)
+  write.csv(results, temp_result_file_name)
+  
+ 
+  }
+ 
+
+colnames(df0) 
+
+
+df = filter(df0, Brand == "Google")
+
+
+df1 = subset(df, select=-c(Unique_ID,
+                            #Brand_Essential,
+                           Perf_Essential,
+                           Perf_ESS_DIG,
+                           Binary_Most_Essential,
+                           Binary_Second_Most_Essential,
+                           Binary_Combined_Essential,
+                           Brand
+                           
+))
+
+)
+
+#df1 <- sapply(df1,as.factor)
+df3 <- as.data.frame(df1)
+df2 <- as.data.frame(df1)
+# x = as.data.frame(sapply(df2, class))
+
+# df2 <- rename(df2, c(
+#   "Brand_Ad_Results" = "Is effective at achieving ad results (such as impact on brand awareness, view time)",
+#   "Brand_Audiences" = "Helps me reach the audience(s) I care about",
+#   "Brand_Biz_Results" = "Is effective at achieving business results (such as impact on sales, conversions)",
+#   "Brand_Channels" = "Has channels or content where I want to advertise",
+#   "Brand_Content" = "Is a place to find a high-quality content",
+#   "Brand_Easy" = "Has advertising product offerings that are easy to understand",
+#   "BRAND_ENGAGED" = "Has audience(s) that are engaged at all times while using the platform",
+#   "Brand_Transparency" = "Offers transparency as to where ads are placed",
+#   "Brand_Trust" = "Is an advertising platform that I trust",
+#   # "Brand_Essential" = "Is essential for building my brand(s) (Scaled)"
+#   # "Brand_Most_Essential_1" = "Most essential for building your companys/clients brand (Binary)"
+#   # "Brand_Most_Essential_2" = "Second most essential for building your companys/clients brand (Binary)"
+#   "Brand_Prefer" = "Prefer to use for brand building and advertising (Binary)"
+#   # "Brand_Most_Essential_Combined" = "Most essential for building your companys/clients brand (Binary - Combined)"
+# ))
+
+
+# pull out necessary variables, dependent variable first
+daData <- df2[,c(
+  
+  # "Binary_Preference",
+  # "Binary_Most_Essential",
+  # "Binary_Second_Most_Essential",
+  # "Binary_Combined_Essential",
+  "Binary_Preference",
+  "Perf_Measure",
+  "Perf_Moments",
+  "Perf_Target",
+  "Perf_Easy",
+  "Perf_Partner_Growth",
+  "Perf_Partner_Goals",
+  "Perf_Trust",
+  "Perf_In_Store",
+  "Perf_ROI",
+  "Perf_Insights",
+  "Perf_Future"
+  
+
+)]
+
+
+daData_ordinal<-daData
+
+str(daData)
+
+daData_ordinal$Binary_Preference=as.factor(daData_ordinal$Binary_Preference)
+daData_ordinal$Perf_Measure=ordered(daData_ordinal$Perf_Measure,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Moments=ordered(daData_ordinal$Perf_Moments,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Target=ordered(daData_ordinal$Perf_Target,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Easy=ordered(daData_ordinal$Perf_Easy,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Partner_Growth=ordered(daData_ordinal$Perf_Partner_Growth,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Partner_Goals=ordered(daData_ordinal$Perf_Partner_Goals,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Trust=ordered(daData_ordinal$Perf_Trust,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_In_Store=ordered(daData_ordinal$Perf_In_Store,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_ROI=ordered(daData_ordinal$Perf_ROI,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Insights=ordered(daData_ordinal$Perf_Insights,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+daData_ordinal$Perf_Future=ordered(daData_ordinal$Perf_Future,levels=1:5,labels=c(" Strongly disagree"," Disagree"," Neither agree nor disagree"," Agree"," Strongly agree"))
+
+
+str(daData_ordinal)
+
+//////////////////////////////
+
+
+daData_ordinal_numeric<-daData
+
+str(daData_ordinal_numeric)
+
+daData_ordinal_numeric$Binary_Preference=as.factor(daData_ordinal_numeric$Binary_Preference)
+daData_ordinal_numeric$Perf_Measure=ordered(daData_ordinal_numeric$Perf_Measure,levels=1:5)
+daData_ordinal_numeric$Perf_Moments=ordered(daData_ordinal_numeric$Perf_Moments,levels=1:5)
+daData_ordinal_numeric$Perf_Target=ordered(daData_ordinal_numeric$Perf_Target,levels=1:5)
+daData_ordinal_numeric$Perf_Easy=ordered(daData_ordinal_numeric$Perf_Easy,levels=1:5)
+daData_ordinal_numeric$Perf_Partner_Growth=ordered(daData_ordinal_numeric$Perf_Partner_Growth,levels=1:5)
+daData_ordinal_numeric$Perf_Partner_Goals=ordered(daData_ordinal_numeric$Perf_Partner_Goals,levels=1:5)
+daData_ordinal_numeric$Perf_Trust=ordered(daData_ordinal_numeric$Perf_Trust,levels=1:5)
+daData_ordinal_numeric$Perf_In_Store=ordered(daData_ordinal_numeric$Perf_In_Store,levels=1:5)
+daData_ordinal_numeric$Perf_ROI=ordered(daData_ordinal_numeric$Perf_ROI,levels=1:5)
+daData_ordinal_numeric$Perf_Insights=ordered(daData_ordinal_numeric$Perf_Insights,levels=1:5)
+daData_ordinal_numeric$Perf_Future=ordered(daData_ordinal_numeric$Perf_Future,levels=1:5)
+
+
+str(daData_ordinal_numeric)
+
+sum(is.na(daData_ordinal_numeric))
+
+# raw relative importance
+model1_raw <- calc.relimp(daData_ordinal_numeric, type ="genizi")
+# re-proportioned
+model1_prop <- calc.relimp(daData_ordinal_numeric, type ="genizi", rela=TRUE)
+# data frame of results
+results <- cbind(model1_raw$genizi,model1_prop$genizi)
+# save or copy to report.
+
+# View(results)
+write.csv(results, "Dominance.csv")
+
+round(model1_raw@R2,digits=3)
+
+file.show("Dominance.csv")
+
+# 
+# ################################################################
+# ########## Linear Regression
+# 
+# linr<-  lm(formula = Brand_Essential ~ .,  data = df3)
+# summary(linr)
+# 
+# da <- dominanceAnalysis(linr)
+# print(da)
+# summary(da)
+# 
+# plot(da,which.graph='complete')
+# plot(da,which.graph='conditional')
+# plot(da,which.graph='general')
+# 
+# x <- as.data.frame(averageContribution(da))
+# View(x)
+# write.csv(x, "Dominancej.csv")
+# 
+# ############################################################
+# ## Logisctic Regression
+# 
+# logr<-  glm(formula = Brand_Prefer ~ .,
+#             family = "binomial", data = df3)
+# summary(logr)
+# 
+# 
+# da <- dominanceAnalysis(logr)
+# print(da)
+# summary(da)
+# 
+# plot(da,which.graph='complete')
+# plot(da,which.graph='conditional')
+# plot(da,which.graph='general')
+# 
+# x <- as.data.frame(averageContribution(da))
+# View(x)
+# write.csv(x, "Dominancej.csv")
+# PseudoR2(logr)
+# 
+# ###########################################
+# 
+# 
+# 
+# 
+# 
+# 
+
+
+
+
+
+
+
+
+
+
+df11 <- sapply(df1,as.factor)
+df22 <- as.data.frame(df11)
+x = as.data.frame(sapply(df22, class))
+
+
+x = as.data.frame(sapply(df1, class))
+
+
+str(df1)
+str(df11)
+str(x)
+
+
+
+
+rm(list =ls())
+library(relaimpo)
+library(dplyr) 
+library(DataCombine)
+library(magrittr)
+library(InformationValue)
+library(dominanceanalysis)
+library(DescTools)
+
+setwd("C:/Users/10920/Desktop/Google/DA/4_March")
+df0 = read.csv(file = "US_NextGen_Plat_and_Image_data.csv", header = TRUE, sep = ",")
+
+colnames(df0)
+
+
+#### For Market Level #########
+
+df11 = filter(df0)
+df111 = subset(df11, select=-c(ï..Respondent_Serial,
+                            PII_COMPANY_NAME_OE,
+                            PII_COMPANY_NAME_OTHER_961,
+                            PII,
+                            Weight,
+                            Brand,
+                            PLAT_ESSN_AWARE,
+                            PLAT_ESSN_SALES,
+                            PLAT_ESSN_AWARE,
+                            PLAT_PERFORM,
+                            PLAT_CLOSENESS,
+                            BINARY_PLAT_ESSN_AWARE,
+                            BINARY_PLAT_ESSN_SALES
+                            
+))
+
+daData <- df111[,c(
+  "PLAT_SPEND1_AP_2",
+  "ENGAGE",
+  "TRUST",
+  "CONTENT",
+  "REACH",
+  "REPTOOLS",
+  "ROI",
+  "EASY",
+  "ADFRAUD",
+  "PRIVACY",
+  "TRANSPARENT",
+  "CREATIVE",
+  "PRICE",
+  "EFFCTAWRE",
+  "EFFCTCNVT")]
+
+
+daData <- subset(daData, daData$PLAT_SPEND1_AP_2 != 0 & daData$PLAT_SPEND1_AP_2 != 99)
+
+
+
+# raw relative importance
+model1_raw <- calc.relimp(daData, type ="genizi")
+# re-proportioned
+model1_prop <- calc.relimp(daData, type ="genizi", rela=TRUE)
+# data frame of results
+results <- cbind(model1_raw$genizi,model1_prop$genizi)
+# save or copy to report.
+temp_result_file_name<-paste("Dominance_PLAT_PREF1", "Market_app_2",".csv")
+# View(results)
+write.csv(results, temp_result_file_name)
+
+
+###### At Brand Level #########
+
+Brand_list<-list("Google Search","YouTube")
+
+for (i in Brand_list) {
+  
+  df = filter(df0, Brand == i)
+  
+  df1 = subset(df, select=-c(ï..Respondent_Serial,
+                              PII_COMPANY_NAME_OE,
+                              PII_COMPANY_NAME_OTHER_961,
+                              PII,
+                              Weight,
+                              Brand,
+                              PLAT_ESSN_AWARE,
+                              PLAT_ESSN_SALES,
+                              PLAT_ESSN_AWARE,
+                              PLAT_PERFORM,
+                              PLAT_CLOSENESS,
+                              BINARY_PLAT_ESSN_AWARE,
+                              BINARY_PLAT_ESSN_SALES
+                             
+  ))
+  
+  daData <- df1[,c(
+                    "PLAT_PREF1_AP_2",
+                    "ENGAGE",
+                    "TRUST",
+                    "CONTENT",
+                    "REACH",
+                    "REPTOOLS",
+                    "ROI",
+                    "EASY",
+                    "ADFRAUD",
+                    "PRIVACY",
+                    "TRANSPARENT",
+                    "CREATIVE",
+                    "PRICE",
+                    "EFFCTAWRE",
+                    "EFFCTCNVT")]
+  
+  
+  daData <- subset(daData, daData$PLAT_PREF1_AP_2 != 0 & daData$PLAT_PREF1_AP_2 != 99)
+  
+  # raw relative importance
+  model1_raw <- calc.relimp(daData, type ="genizi")
+  # re-proportioned
+  model1_prop <- calc.relimp(daData, type ="genizi", rela=TRUE)
+  # data frame of results
+  results <- cbind(model1_raw$genizi,model1_prop$genizi)
+  # save or copy to report.
+  temp_result_file_name<-paste("Dominance_PLAT_PREF1", i,"app_2.csv")
+  # View(results)
+  write.csv(results, temp_result_file_name)
+  
+ 
+  }
+
+rm(list =ls())
+Packages <- c("plyr", "dplyr", "tidyr", "bnlearn", "reshape", "bnviewer","DataCombine")
+lapply(Packages, library, character.only = TRUE)
+
+
+set.seed(56)
+
+setwd("C:/Users/10920/Desktop/Google/Other Markets/NextGen")
+# UK
+df0 = read.csv(file = "NextGen_data_file_UK_30032021_v1.csv", header = TRUE, sep = ",")
+
+# Japan
+#df0 = read.csv(file = "NextGen_data_file_Japan_30032021_v1.csv", header = TRUE, sep = ",")
+
+# Brazil
+#df0 = read.csv(file = "NextGen_data_file_Brazil_30032021_v1.csv", header = TRUE, sep = ",")
+
+#df = df0
+
+#'"YouTube"' "Google Search"
+
+df = filter(df0, Brand == "YouTube")
+colnames(df)
+
+# df1 = subset(df, select=-c(ï..Respondent_Serial,
+#                             PII_COMPANY_NAME_OE,
+#                             PII_COMPANY_NAME_OTHER_961,
+#                             PII,
+#                             Weight,
+#                             Brand,
+#                             PLAT_ESSN_AWARE,
+#                             PLAT_ESSN_SALES,
+#                             BINARY_PLAT_ESSN_AWARE,
+#                             BINARY_PLAT_ESSN_SALES,
+#                             PLAT_SPEND1,
+#                             PLAT_PREF1,
+#                             PLAT_PERFORM,
+#                             PLAT_CLOSENESS,
+#                             PLAT_SPEND1_AP_2,
+#                             PLAT_PREF1_AP_2,
+#                             BINARY_PLAT_SPEND1_AP_2,
+#                             BINARY_PLAT_PREF1_AP_2,
+#                             BINARY_PLAT_SPEND1_PREF1_AP_2,
+#                             COMBINED_PLAT_SPEND1_PREF1
+#                             
+#                             
+#                            
+#                            ))
+
+
+df1 <- df[,c(
+  "BINARY_PLAT_SPEND1_PREF1_AP_1",
+  "ENGAGE",
+  "TRUST",
+  "CONTENT",
+  "REACH",
+  "REPTOOLS",
+  "ROI",
+  "EASY",
+  "ADFRAUD",
+  "PRIVACY",
+  "TRANSPARENT",
+  "CREATIVE",
+  "PRICE",
+  "EFFCTAWRE",
+  "EFFCTCNVT")]
+
+df1 <- subset(df1, df1$BINARY_PLAT_SPEND1_PREF1_AP_1 != 99)
+sum(df1$BINARY_PLAT_SPEND1_PREF1_AP_1)
+df1 <- sapply(df1,as.factor)
+df2 <- as.data.frame(df1)
+df2<-df2 %>% mutate_if(is.character,as.factor)
+
+
+
+ 
+BL <- matrix(c(
+  "PRIVACY","TRUST",
+  "ADFRAUD","CREATIVE",
+  "CONTENT","PRIVACY",
+  "CONTENT","TRANSPARENT",
+  "CONTENT","TRUST",
+  "CREATIVE","PRICE",
+  "EASY","PRICE",
+  "EFFCTAWRE","PRICE",
+  "ENGAGE","ADFRAUD",
+  "ENGAGE","PRIVACY",
+  "ENGAGE","TRANSPARENT",
+  "ENGAGE","TRUST",
+  "PRIVACY","PRICE",
+  "REACH","PRIVACY",
+  "REACH","TRUST",
+  "ROI","PRICE",
+  "TRUST","ROI",
+  "BINARY_PLAT_SPEND1_PREF1_AP_1","ADFRAUD",
+  "CONTENT","PRICE",
+  "CREATIVE","ADFRAUD",
+  "CREATIVE","PRIVACY",
+  "CREATIVE","TRUST",
+  "EASY","TRANSPARENT",
+  "EASY","TRUST",
+  "EFFCTAWRE","REPTOOLS",
+  "EFFCTAWRE","TRUST",
+  "EFFCTCNVT","PRICE",
+  "EFFCTCNVT","TRANSPARENT",
+  "REACH","ADFRAUD",
+  "REACH","CREATIVE",
+  "REACH","TRANSPARENT",
+  "REPTOOLS","PRIVACY",
+  "ROI","TRUST",
+  "BINARY_PLAT_SPEND1_PREF1_AP_1","PRICE",
+  "BINARY_PLAT_SPEND1_PREF1_AP_1","ROI",
+  "PRIVACY","ROI",
+  "TRUST","CREATIVE",
+  "TRUST","EASY",
+  "TRANSPARENT","EASY",
+  "PRIVACY","ENGAGE",
+  "PRIVACY","REACH"
+
+  ),
+  ncol = 2, byrow = TRUE)
+ # BL
+  
+   
+# WL <- matrix(c(
+# 
+#   "REACH","BINARY_PLAT_SPEND1_PREF1_AP_1",
+#   "REPTOOLS","BINARY_PLAT_SPEND1_PREF1_AP_1",
+#   "REPTOOLS","REACH"
+# 
+# 
+# 
+# ),
+# ncol = 2, byrow = TRUE)
+# WL
+
+#BN_RLM_HC_9 <- hc(df2, score = "aic")
+# BN_RLM_HC_9 <- hc(df2, score = "aic", whitelist = WL)
+
+
+BN_RLM_HC_9 <- hc(df2, score = "aic", blacklist = BL)
+#BN_RLM_HC_9 <- hc(df2, score = "aic", whitelist = WL, blacklist = BL)
+# View(df2)
+
+
+Score_BN <- score(BN_RLM_HC_9,df2)
+View(Score_BN)
+
+acyclic(BN_RLM_HC_9, directed = FALSE, debug = FALSE)
+directed(BN_RLM_HC_9)
+
+############# Dynamic Plotting Graph using BN Viewer #######################################
+viewer(BN_RLM_HC_9,
+       bayesianNetwork.width = "100%",
+       bayesianNetwork.height = "80vh",
+       # bayesianNetwork.layout = "layout_on_sphere",
+       # bayesianNetwork.layout = "layout_on_grid",
+       # bayesianNetwork.layout = "layout_in_circle",
+       # bayesianNetwork.layout = "layout_as_star",
+       # bayesianNetwork.layout = "layout_as_tree",
+       bayesianNetwork.layout = "layout_with_sugiyama",
+       # bayesianNetwork.layout = "layout_with_kk",
+       # bayesianNetwork.layout = "layout_with_dh",
+       # bayesianNetwork.layout = "layout_with_lgl",
+       # bayesianNetwork.layout = "layout_with_mds",
+       # bayesianNetwork.layout = "layout_with_gem",
+       # bayesianNetwork.layout = "layout_nicely",
+       # bayesianNetwork.layout = "layout_components",
+       
+       bayesianNetwork.title="Bayesian Network",
+       bayesianNetwork.subtitle = "Essential",
+       # bayesianNetwork.footer = "Nodes and Arcs Practise",
+       # edges.dashes = TRUE, edges.smooth = FALSE,
+       
+       node.colors = list(background = "#f4bafd",
+                          border = "#2b7ce9",
+                          highlight = list(background = "red",
+                                           border = "black"))
+       
+)
+
+### Arc List############################################################################
+Arcs_DF <- as.data.frame(arcs(BN_RLM_HC_9))
+##View(Arcs_DF)
+Arcs_DF$Unique <- paste(Arcs_DF$from,Arcs_DF$to,sep = "-")
+
+#Boot_Strength_8 <- boot.strength(df2, cluster = NULL, R = 100, m = 50, algorithm = "hc", algorithm.args = list(), cpdag = TRUE, debug = FALSE)
+Boot_Strength_8 <- boot.strength(df2, cluster = NULL, R = 1000, m = nrow(df2), algorithm = "hc", algorithm.args = list(), cpdag = TRUE, debug = FALSE)
+
+Boot_Strength_DF <- data.frame(From = Boot_Strength_8$from, To = Boot_Strength_8$to,
+                               strength = Boot_Strength_8$strength,
+                               direction = Boot_Strength_8$direction
+)
+##View(Boot_Strength_DF)
+Boot_Strength_DF$Unique <- paste(Boot_Strength_DF$From,Boot_Strength_DF$To,sep = "-")
+Arcs_BN <- merge(Arcs_DF,Boot_Strength_DF,by = "Unique")
+Arcs_BN = subset(Arcs_BN, select = c(4:7))
+#View(Arcs_BN)
+
+write.csv(Boot_Strength_8, file = "111Boot Strength of Arc.csv")
+write.csv(Arcs_BN, file = "Boot Strength of Arc.csv")
+
+#############################################################################
+
+fittedbn <- bn.fit(BN_RLM_HC_9, data = df2)
+
+set.seed(56)
+
+
+DH1 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`ENGAGE` == 1)),  n = 10000000)
+DH2 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1== 1),  evidence = ((`TRUST` == 1)),  n = 10000000)
+DH3 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`CONTENT` == 1)),  n = 10000000)
+DH4 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`REACH` == 1)),  n = 10000000)
+DH5 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`REPTOOLS` == 1)),  n = 10000000)
+DH6 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`ROI` == 1)),  n = 10000000)
+DH7 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`EASY` == 1)),  n = 10000000)
+DH8 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`ADFRAUD` == 1)),  n = 10000000)
+DH9 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`PRIVACY` == 1)),  n = 10000000)
+DH10 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`TRANSPARENT` == 1)),  n = 10000000)
+DH11 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`CREATIVE` == 1)),  n = 10000000)
+DH12 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`PRICE` == 1)),  n = 10000000)
+DH13 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`EFFCTAWRE` == 1)),  n = 10000000)
+DH14 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`EFFCTCNVT` == 1)),  n = 10000000)
+
+
+DL1 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`ENGAGE` == 0)),  n = 10000000)
+DL2 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`TRUST` == 0)),  n = 10000000)
+DL3 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`CONTENT` == 0)),  n = 10000000)
+DL4 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`REACH` == 0)),  n = 10000000)
+DL5 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`REPTOOLS` == 0)),  n = 10000000)
+DL6 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`ROI` == 0)),  n = 10000000)
+DL7 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`EASY` == 0)),  n = 10000000)
+DL8 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`ADFRAUD` == 0)),  n = 10000000)
+DL9 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`PRIVACY` == 0)),  n = 10000000)
+DL10 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`TRANSPARENT` == 0)),  n = 10000000)
+DL11 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`CREATIVE` == 0)),  n = 10000000)
+DL12 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`PRICE` == 0)),  n = 10000000)
+DL13 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`EFFCTAWRE` == 0)),  n = 10000000)
+DL14 <- cpquery(fittedbn, event = (BINARY_PLAT_SPEND1_PREF1_AP_1 == 1),  evidence = ((`EFFCTCNVT` == 0)),  n = 10000000)
+
+
+g1 <- rbind(DH1 ,DH2 ,DH3 ,DH4 ,DH5 ,DH6 ,DH7 ,DH8 ,DH9, DH10, DH11, DH12, DH13, DH14)
+g2 <- rbind(DL1 ,DL2 ,DL3 ,DL4 ,DL5 ,DL6 ,DL7 ,DL8 ,DL9, DL10, DL11, DL12, DL13, DL14)
+g3 <- cbind(g1, g2)
+
+write.csv(g3, file = "Impact Score.csv")
+
+
+########################### Arc######################
+
+library(bnlearn)
+library(bnviewer)
+
+set.seed(56)
+#bayesianNetwork.boot.strength = boot.strength(df2, R = 20, algorithm = "hc")
+bayesianNetwork.boot.strength = boot.strength(df2, cluster = NULL, R = 1000, m = nrow(df2), algorithm = "hc", algorithm.args = list(), cpdag = TRUE, debug = FALSE)
+
+##View(bayesianNetwork.boot.strength)
+#avg.bayesianNetwork = averaged.network(bayesianNetwork.boot.strength, threshold = 0)
+avg.bayesianNetwork = BN_RLM_HC_9
+#View(bayesianNetwork.boot.strength)
+bayesianNetwork.boot.strength$strength <- format(round(bayesianNetwork.boot.strength$strength,2))
+bayesianNetwork.boot.strength$strength <- revalue(bayesianNetwork.boot.strength$strength, c("1.00"="0.98"))
+
+
+strength.viewer(
+  avg.bayesianNetwork,
+  bayesianNetwork.boot.strength,
+  bayesianNetwork.background = "white",
+  bayesianNetwork.arc.strength.threshold.expression = c("@threshold >= 0 & @threshold < 0.25",
+                                                        "@threshold >= 0.25 & @threshold < 0.5",
+                                                        "@threshold >= 0.5 & @threshold < 0.75",
+                                                        "@threshold >= 0.75 & @threshold <= 1"),
+  # bayesianNetwork.arc.strength.threshold.expression = c("@threshold > 0 & @threshold < 0.2",
+  #                   "@threshold >= 0.2 & @threshold <= 1"),
+  
+  ##bayesianNetwork.arc.strength.threshold.expression.color  = c("red", "yellow", "green"),
+  #bayesianNetwork.arc.strength.threshold.expression.color  = c("yellow", "orange", "brown", "green"),
+  bayesianNetwork.arc.strength.threshold.expression.color  = c("#FFFF00", "#FFC000", "#92D050", "#548235"),
+  # bayesianNetwork.arc.strength.threshold.expression.color  = c("red", "blue"),
+  bayesianNetwork.arc.strength.threshold.alternative.color =  "white",
+  
+  bayesianNetwork.arc.strength.label = FALSE,
+  bayesianNetwork.arc.strength.label.prefix = "",
+  bayesianNetwork.arc.strength.label.color = "black",
+  
+  bayesianNetwork.arc.strength.tooltip = TRUE,
+  
+  bayesianNetwork.edge.scale.min = 1,
+  bayesianNetwork.edge.scale.max = 3,
+  
+  bayesianNetwork.edge.scale.label.min = 14,
+  bayesianNetwork.edge.scale.label.max = 14,
+  
+  bayesianNetwork.width = "100%",
+  bayesianNetwork.height = "800px",
+  bayesianNetwork.layout = "layout_with_sugiyama",
+  node.colors = list(background = "#97c2fc",
+                     border = "#2b7ce9",
+                     highlight = list(background = "#e91eba",
+                                      border = "#2b7ce9")),
+  node.font = list(color = "black", face="Arial"),
+  edges.dashes = FALSE,
+  
+  bayesianNetwork.title="Bayesian Network Strength Analysis",
+  bayesianNetwork.subtitle = "Platform_Spend_Preference_combined_variable",
+    bayesianNetwork.footer = ""
+)
+
+
+#######################Corr##########################################
+
+# library(polycor)
+# library(dplyr)
+
+###################### PARENT IMAGERY ############################################
+
+setwd("D:/Google/07-23-2020 Next Gen/Working/01-18-2021 Correlation/Input Output files")
+df0 = read.csv(file = "Parent_Imagery 1.0.csv", header = TRUE, sep = ",")
+df = df0
+df = filter(df0, COUNTRY10 == 84, Brand == "Google" | Brand == "Facebook" | Brand == "Amazon")
+df = filter(df0, COUNTRY10 == 84, Brand == "Google")
+
+View(df)
+df1 = subset(df, select=-c(Respondent_Serial,
+                           Brand,
+                           Weight,
+                           COUNTRY10,
+                           BIZ_PARENT_SALESREP,
+                           BIZ_PARENT_SALESREP2,
+                           PII_COMPANY_NAME_OE,
+                           PII_COMPANY_NAME_OTHER_961,
+                           PII
+                           ))
+
+df3 <- df1
+df1 <- sapply(df1,as.factor)
+df2 <- as.data.frame(df1)
+Daily_Matrix <- hetcor(df2)
+#View(df2)
+Daily_Matrix1 <- as.data.frame(Daily_Matrix$correlations)
+write.csv(Daily_Matrix1, file = "Polychor Parent.csv")
+
+# Daily_Matrix2 <- cor(df2, method = c("pearson", "kendall", "spearman"))
+Daily_Matrix2 <- cor(df3)
+write.csv(Daily_Matrix2, file = "corr Parent.csv")
+
+# View(df3)
+
+################################# PLATFORM IMAGERY #########################################
+
+
+setwd("D:/Google/07-23-2020 Next Gen/Working/01-18-2021 Correlation/Input Output files")
+df0 = read.csv(file = "Platform_Imagery 1.0.csv", header = TRUE, sep = ",")
+df = df0
+df = filter(df0, COUNTRY10 == 84, Brand == "Google Search " | Brand == "YouTube " | Brand == "Facebook " | Brand == "Instagram " | Brand == "Amazon " | Brand == "Broadcast TV " | Brand == "Hulu ")
+df = filter(df0, COUNTRY10 == 84, Brand == "Google Search ")
+
+
+View(df)
+df1 = subset(df, select=-c(Respondent_Serial,
+                           Brand,
+                           Weight,
+                           COUNTRY10,
+                           PII_COMPANY_NAME_OE,
+                           PII_COMPANY_NAME_OTHER_961,
+                           FAM_ALL,
+                           FAM_KEY,
+                           PLAT_FAM, 
+                           PLAT_USE_P6M, 
+                           PLAT_USE_N6M, 
+                           PLAT_SPEND0, 
+                           PLAT_PREF0, 
+                           HIDDEN_PLAT_PREF0, 
+                           PLAT_ESSN_AWARE, 
+                           PLAT_ESSN_SALES, 
+                           PLAT_PERFORM, 
+                           PLAT_CLOSENESS,
+                           PII
+                          
+))
+
+df3 <- df1
+df1 <- sapply(df1,as.factor)
+df2 <- as.data.frame(df1)
+# Daily_Matrix <- hetcor(df2, use = "pairwise.complete.obs")
+Daily_Matrix <- hetcor(df2)
+#View(df2)
+Daily_Matrix1 <- as.data.frame(Daily_Matrix$correlations)
+write.csv(Daily_Matrix1, file = "Polychor Platform Search.csv")
+
+# Daily_Matrix2 <- cor(df2, method = c("pearson", "kendall", "spearman"))
+Daily_Matrix2 <- cor(df3, use = "pairwise.complete.obs")
+write.csv(Daily_Matrix2, file = "corr Platform search.csv")
+
+# View(df)
+
+
+
+
+setwd("D:/Google/07-23-2020 Next Gen/Working/01-18-2021 Correlation/Input Output files")
+df0 = read.csv(file = "Platform_Imagery 1.0.csv", header = TRUE, sep = ",")
+df = df0
+df = filter(df0, COUNTRY10 == 84, Brand == "YouTube ")
+# View(df0)
+df1 = subset(df, select=-c(Respondent_Serial,
+                           Brand,
+                           Weight,
+                           COUNTRY10,
+                           PII_COMPANY_NAME_OE,
+                           PII_COMPANY_NAME_OTHER_961,
+                           FAM_ALL,
+                           FAM_KEY
+                           
+))
+
+df3 <- df1
+df1 <- sapply(df1,as.factor)
+df2 <- as.data.frame(df1)
+Daily_Matrix <- hetcor(df2, use = "pairwise.complete.obs")
+#View(df2)
+Daily_Matrix1 <- as.data.frame(Daily_Matrix$correlations)
+write.csv(Daily_Matrix1, file = "Polychor Platform youtube.csv")
+
+# Daily_Matrix2 <- cor(df2, method = c("pearson", "kendall", "spearman"))
+Daily_Matrix2 <- cor(df3, use = "pairwise.complete.obs")
+write.csv(Daily_Matrix2, file = "corr Platform youtube.csv")
+
+# View(df)
+
+
+#################### Strength Viewer###############################
+
+strength.viewer(
+  Boot_Strength_8,
+  bayesianNetwork.boot.strength,
+  bayesianNetwork.background = "white",
+  bayesianNetwork.arc.strength.threshold.expression = c("@threshold > 0 & @threshold < 0.5",
+                                                        "@threshold >= 0.5 & @threshold < 0.75",
+                                                        "@threshold >= 0.75 & @threshold <= 1"),
+  
+  bayesianNetwork.arc.strength.threshold.expression.color  = c("red", "yellow", "green"),
+  bayesianNetwork.arc.strength.threshold.alternative.color =  "white",
+  
+  bayesianNetwork.arc.strength.label = TRUE,
+  bayesianNetwork.arc.strength.label.prefix = "",
+  bayesianNetwork.arc.strength.label.color = "black",
+  
+  bayesianNetwork.arc.strength.tooltip = TRUE,
+  
+  bayesianNetwork.edge.scale.min = 1,
+  bayesianNetwork.edge.scale.max = 3,
+  
+  bayesianNetwork.edge.scale.label.min = 14,
+  bayesianNetwork.edge.scale.label.max = 14,
+  
+  bayesianNetwork.width = "100%",
+  bayesianNetwork.height = "800px",
+  bayesianNetwork.layout = "layout_with_sugiyama",
+  node.colors = list(background = "#97c2fc",
+                     border = "#2b7ce9",
+                     highlight = list(background = "#e91eba",
+                                      border = "#2b7ce9")),
+  
+  node.font = list(color = "black", face="Arial"),
+  edges.dashes = FALSE,
+  
+  bayesianNetwork.title="Bayesian Network Strength Analysis - Coronary",
+  bayesianNetwork.subtitle = "Coronary heart disease data set",
+  bayesianNetwork.footer = "Fig. 1 - Layout with Sugiyama"
+)
+
+#####################
+
+# Packages <- c("plyr", "dplyr", "tidyr", "bnlearn", "reshape", "bnviewer")
+# lapply(Packages, library, character.only = TRUE)
+# library(DataCombine)
+
+set.seed(56)
+setwd("C:/Users/10920/Desktop/Google/BA/NextGen")
+df0 = read.csv(file = "US_Brand_Image_data.csv", header = TRUE, sep = ",")
+df = df0
+df = filter(df0, Brand == "Google Search")
+
+df1 = subset(df, select=-c(Unique_ID,
+                           # Brand_Essential,
+                           Binary_Preference,
+                           Binary_Most_Essential,
+                           Binary_Second_Most_Essential,
+                           Binary_Combined_Essential,
+                           Brand
+))
+# replace_dataframe <- data.frame("from" = c("Neither agree nor disagree","Strongly disagree","Strongly agree","Disagree","Agree","Yes","No"), "to" = c(3,1,5,2,4,5,1))
+# x = data.frame(FindReplace(df1, Var = "Perf_Essential", replaceData = replace_dataframe))
+# 
+# ##Q19
+# df$Q19[df$Q19 == 1]=1
+# df$Q19[df$Q19 == 2]=1
+# df$Q19[df$Q19 == 3]=0
+
+df1 <- sapply(df1,as.factor)
+df2 <- as.data.frame(df1)
+x = as.data.frame(sapply(df2, class))
+str(df2)
+
+df2 <- rename(df2, c(
+  "Binary_Combined_Essential" = "Most essential for building your companys/clients brand (Binary - Combined)",
+  "Brand_Content" = "Is a place to find a high-quality content",
+  "Brand_Channels" = "Has channels or content where I want to advertise",
+  "Brand_Audiences" = "Helps me reach the audience(s) I care about",
+  "Brand_Ad_Results" = "Is effective at achieving ad results (such as impact on brand awareness, view time)",
+  "Brand_Biz_Results" = "Is effective at achieving business results (such as impact on sales, conversions)",
+  "Brand_Trust" = "Is an advertising platform that I trust",
+  "Brand_Transparency" = "Offers transparency as to where ads are placed",
+  "BRAND_ENGAGED" = "Has audience(s) that are engaged at all times while using the platform",
+  "Brand_Easy" = "Has advertising product offerings that are easy to understand"
+))
+
+BL <- matrix(c(
+    "Brand_Essential", "Has channels or content where I want to advertise"
+),
+ncol = 2, byrow = TRUE)
+# BL
+  
+  
+  WL <- matrix(c(
+    "Has channels or content where I want to advertise", "Brand_Essential"
+  ),
+  ncol = 2, byrow = TRUE)
+  WL
+
+
+# BN_RLM_HC_9 <- hc(df2, score = "aic")
+# BN_RLM_HC_9 <- hc(df2, score = "aic", whitelist = WL)
+BN_RLM_HC_9 <- hc(df2, score = "aic", blacklist = BL)
+# BN_RLM_HC_9 <- hc(df2, score = "aic", whitelist = WL, blacklist = BL)
+# View(df2)
+
+
+Score_BN <- score(BN_RLM_HC_9,df2)
+View(Score_BN)
+#View(df2)
+acyclic(BN_RLM_HC_9, directed = FALSE, debug = FALSE)
+directed(BN_RLM_HC_9)
+
+############# Dynamic Plotting Graph using BN Viewer #######################################
+viewer(BN_RLM_HC_9,
+       bayesianNetwork.width = "100%",
+       bayesianNetwork.height = "80vh",
+       # bayesianNetwork.layout = "layout_on_sphere",
+       # bayesianNetwork.layout = "layout_on_grid",
+       # bayesianNetwork.layout = "layout_in_circle",
+       # bayesianNetwork.layout = "layout_as_star",
+       # bayesianNetwork.layout = "layout_as_tree",
+       bayesianNetwork.layout = "layout_with_sugiyama",
+       # bayesianNetwork.layout = "layout_with_kk",
+       # bayesianNetwork.layout = "layout_with_dh",
+       # bayesianNetwork.layout = "layout_with_lgl",
+       # bayesianNetwork.layout = "layout_with_mds",
+       # bayesianNetwork.layout = "layout_with_gem",
+       # bayesianNetwork.layout = "layout_nicely",
+       # bayesianNetwork.layout = "layout_components",
+       
+       bayesianNetwork.title="Bayesian Network",
+       bayesianNetwork.subtitle = "Essential",
+       # bayesianNetwork.footer = "Nodes and Arcs Practise",
+       # edges.dashes = TRUE, edges.smooth = FALSE,
+       
+       node.colors = list(background = "#f4bafd",
+                          border = "#2b7ce9",
+                          highlight = list(background = "red",
+                                           border = "black"))
+       
+)
+
+### Arc List############################################################################
+Arcs_DF <- as.data.frame(arcs(BN_RLM_HC_9))
+##View(Arcs_DF)
+Arcs_DF$Unique <- paste(Arcs_DF$from,Arcs_DF$to,sep = "-")
+
+#Boot_Strength_8 <- boot.strength(df2, cluster = NULL, R = 100, m = 50, algorithm = "hc", algorithm.args = list(), cpdag = TRUE, debug = FALSE)
+Boot_Strength_8 <- boot.strength(df2, cluster = NULL, R = 1000, m = nrow(df2), algorithm = "hc", algorithm.args = list(), cpdag = TRUE, debug = FALSE)
+
+Boot_Strength_DF <- data.frame(From = Boot_Strength_8$from, To = Boot_Strength_8$to,
+                               strength = Boot_Strength_8$strength,
+                               direction = Boot_Strength_8$direction
+)
+##View(Boot_Strength_DF)
+Boot_Strength_DF$Unique <- paste(Boot_Strength_DF$From,Boot_Strength_DF$To,sep = "-")
+Arcs_BN <- merge(Arcs_DF,Boot_Strength_DF,by = "Unique")
+Arcs_BN = subset(Arcs_BN, select = c(4:7))
+#View(Arcs_BN)
+
+write.csv(Boot_Strength_8, file = "111Boot Strength of Arc.csv")
+write.csv(Arcs_BN, file = "Boot Strength of Arc.csv")
+
+#############################################################################
+rm(list=ls())
+df<-read.csv('Data_1.csv')
+df_1<-read.csv('Data_2.csv')
+colnames(df)
+df_2<-merge(df, df_1, by.x="ï..Brand", by.y="ï..Brand")
+df_3<-colnames(df_2)
+library(dplyr)
+
+df_3<-df[c(1,2,3,4),]
+
+
+df_4<- df%>% filter( ï..Brand %in% df_3$ï..Brand)
+
+df_3 <- ifelse(is.na(data_3$q4a),99,data_3$q4a)
+
+write.csv(df_4,"data.csv")
+
+model_1<-lm()
+library(caTools)
+mysplit<-sample.split(df$To.Comfort.Me,SplitRatio = 0.75)
+train<-subset(df,mysplit=T)
+test<-subset(df,mysplit=F)
+
+
+
+for (i in 1:20) {
+  if (i==15) {
+    next()
+    
+  }
+  print(i)
+}
+
+
+########################### Indent Macro #############################
+
+Public Function Col_Letter(lngCol As Long) As String
+    Dim vArr
+    vArr = Split(Cells(1, lngCol).Address(True, False), "$")
+    Col_Letter = vArr(0)
+End Function
+Sub indent()
+        
+Dim LastRow, WS_Count  As Integer
+Dim ws, sht As Worksheet
+Dim strSheetName, ColumnLetter As String
+
+'WS_Count = ActiveWorkbook.Worksheets.Count
+Dim I As Long
+I = 1
+
+For Each ws In ActiveWorkbook.Worksheets
+         
+  Worksheets(ws.Name).Activate
+  Set sht = ActiveSheet
+  LastRow = sht.Cells(sht.Rows.Count, "A").End(xlUp).Row
+  
+  ColumnLetter = Col_Letter(I)
+  
+   Sheets("Indent").Range(ColumnLetter & 1).Value = ActiveSheet.Name
+  'strSheetName = ActiveSheet.Name
+  'Sheets("Indent").Range("A" & 1).Value = strSheetName
+  
+  For a = 1 To LastRow
+    
+    Sheets("Indent").Range(ColumnLetter & a + 1).Value = sht.Range("A" & a).IndentLevel
+  
+  Next a
+  
+  I = I + 1
+
+Next ws
+       
+End Sub
+
+################################ Random Forest #######################################
+
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("PerformanceAnalytics")
+library(PerformanceAnalytics)
+#install.packages("caret")
+library(caret)
+#install.packages("e1071")
+library(e1071)
+#install.packages("randomForest")
+library(randomForest)
+#install.packages("car")
+library(car)
+#install.packages("fmsb")
+library(fmsb)
+
+
+
+
+##### Changing the path to working directory #####
+
+#setwd("C://Users//11043//Downloads")
+
+#### Data Upload as input file #####
+
+data_master_input=read.csv(paste(file.choose()))
+data=(data_master_input[-c(1),])
+data_1=data
+data_1[,c(1)]=as.numeric(as.character(data_1[,c(1)]))
+data_1[,c(2)]=as.numeric(as.character(data_1[,c(2)]))
+data_1[,c(3)]=as.numeric(as.character(data_1[,c(3)]))
+data_1[,c(4)]=as.numeric(as.character(data_1[,c(4)]))
+data_1[,c(5)]=as.numeric(as.character(data_1[,c(5)]))
+data_1[,c(6)]=as.numeric(as.character(data_1[,c(6)]))
+data_1[,c(7)]=as.numeric(as.character(data_1[,c(7)]))
+data_1[,c(8)]=as.numeric(as.character(data_1[,c(8)]))
+data_1[,c(9)]=as.numeric(as.character(data_1[,c(9)]))
+data_1[,c(10)]=as.numeric(as.character(data_1[,c(10)]))
+data_1[,c(11)]=as.numeric(as.character(data_1[,c(11)]))
+data_1[,c(12)]=as.numeric(as.character(data_1[,c(12)]))
+data_1[,c(13)]=as.numeric(as.character(data_1[,c(13)]))
+data_1[,c(14)]=as.numeric(as.character(data_1[,c(14)]))
+data_1[,c(15)]=as.numeric(as.character(data_1[,c(15)]))
+data_1[,c(16)]=as.numeric(as.character(data_1[,c(16)]))
+data_1[,c(17)]=as.numeric(as.character(data_1[,c(17)]))
+data_1[,c(18)]=as.numeric(as.character(data_1[,c(18)]))
+data_1[,c(19)]=as.numeric(as.character(data_1[,c(19)]))
+data_1[,c(20)]=as.numeric(as.character(data_1[,c(20)]))
+data_1[,c(21)]=as.numeric(as.character(data_1[,c(21)]))
+data_1[,c(22)]=as.numeric(as.character(data_1[,c(22)]))
+
+train=data_1[,-20]
+train=train[]
+test=data_1[nrow(data_1),]
+
+#smp_size = floor(0.75 * nrow(data2))
+## set the seed to make your partition reproducible
+#set.seed(1245)
+#train_ind = sample(seq_len(nrow(data2)), size = smp_size)
+#train1 = data2[train_ind, ]
+#test1 = data2[-train_ind, ]
+#data_master_input[,23]=as.factor(data_master_input[,23])
+
+
+set.seed(1)
+rf2= randomForest(Brand.I.Love~.,data=train, importance = TRUE,mtry=4,ntree=500)
+#rf2result=predict(rf2,newdata=test1[,-1],type='response')
+#misClasificError <- mean(rf2result != test1$B.M)
+#print(paste('Accuracy',1-misClasificError))
+
+#varImpPlot(rf2,type=1)
+#varImpPlot(rf2,type=2)
+impvar=data.frame()
+impvar=as.data.frame(rf2$importance)
+x=row.names(impvar)
+x_2=c("T.TV","L.F.TV","L.Digital")
+#### 
+#impvar=cbind(features=x,impvar)
+impvar=impvar[order(-impvar$`%IncMSE`),]
+impvar1=rownames(impvar)[which(rownames(impvar) %in% x_2 == FALSE)]
+#impvar1=rownames(impvar)[rownames(impvar)!= x_2]
+
+#x_2=c("Total.Digital.TRP.transformed","Transformed.FIFA.TV","FIFA.Digital.TRP.transformed","fifa.transformed.interaction","transformed.interaction","Transformed.TV")
+#### x_3 will be sorted media variables as per Random Forest priority
+x_3=rownames(impvar)[which(rownames(impvar) %in% x_2 == TRUE)]
+
+r2s1=vector()
+r2adj1=vector()
+for(i in 1:length(x_3))
+{
+  #x_1=rownames(impvar)[1:i]
+  
+  x_33=x_3[1:i]
+  data_2=train[x_33]
+  data_3=train$ForSomeoneLikeMe
+  data_4=data.frame(data_2,data_3)
+  colnames(data_4)[length(data_4)]="ForSomeoneLikeMe"
+  lr_1=lm(ForSomeoneLikeMe~.,data=data_4)
+  r2s1[i]=summary(lr_1)$r.squared
+  r2adj1[i]=summary(lr_1)$adj.r.squared
+}
+p_1=which(r2adj1==max(r2adj1))
+
+
+x_4=x_3[1:p_1]
+x_5=impvar1  #### new sorted variables added to media x_5
+
+r2fin=vector()
+r2adjfin=vector()
+r2s=vector()
+r2adj=vector()
+xx=list()
+for( j in 1:length(impvar1))
+{
+  for(k in 1:(length(impvar1)-j+1))
+  {
+    
+    x_6=c(x_4,x_5[k])
+    #x_2=c(x_3[1:3],"Unemployment.rate")
+    data_2=train[x_6]
+    data_3=train$ForSomeoneLikeMe
+    data_4=data.frame(data_2,data_3)
+    colnames(data_4)[length(data_4)]="ForSomeoneLikeMe"
+    lr_1=lm(ForSomeoneLikeMe~.,data=data_4)
+    r2s[k]=summary(lr_1)$r.squared
+    r2adj[k]=summary(lr_1)$adj.r.squared
+    if(is.nan(r2adj[k]))
+    {
+      r2adj[k]=0
+    }
+  }
+  r2s2=r2s[1:(length(impvar1)-j+1)]
+  r2adj2=r2adj[1:(length(impvar1)-j+1)]
+  m_1=which(r2adj2==max(r2adj2))[1]
+  x_4=c(x_4,x_5[m_1])
+  xx[j]=list(x_4)
+  x_5=x_5[-c(which(x_5 %in% x_5[m_1]))]
+  r2fin[j]=r2s2[m_1]
+  r2adjfin[j]=r2adj2[m_1]
+}
+
+
+q_1=which(r2adjfin==max(r2adjfin))
+Fin_var=unlist(xx[q_1])
+
+#r2adj
+#x_1=rownames(impvar)[1:j]
+data_2=train[Fin_var]
+data_3=train$ForSomeoneLikeMe
+data_4=data.frame(data_2,data_3)
+colnames(data_4)[length(data_4)]="ForSomeoneLikeMe"
+lr_1=lm(ForSomeoneLikeMe~.,data=data_4)
+predict(lr_1,newdata=test[,-1])
+
+
+############################### Step Wise ############################################
+
+rm(list=ls())
+
+df<-read.csv('canda_data.csv')
+
+library(MASS)
+
+ï..VeryRefreshing
+
+model.1 <- lm( ï..VeryRefreshing~ ., df)
+
+step.model <- stepAIC(model.1, direction = "both", trace = FALSE)
+
+summary(model.1)
+
+
+
+df_chile<-read.csv('Chile.csv')
+
+library(MASS)
+
+ï..Brand.Leader
+
+model.2 <- lm( ï..Brand.Leader~ ., df_chile)
+
+step.model_1 <- stepAIC(model.2, direction = "both", trace = FALSE)
+
+summary(step.model_1)
+
+
+df_Peru<-read.csv('Peru.csv')
+
+library(MASS)
+
+
+
+model.3 <- lm(ï..For.Someone.Like.Me~ ., df_Peru)
+
+step.model_2 <- stepAIC(model.3, direction = "both", trace = FALSE)
+
+summary(step.model_2)
+#################### Agreegate ###############################################
+
+aggregate(sport_data, sport_data$SPORT, sum)
+library(foreign)
+TCB<-read.csv('TCB_RAW.csv')
+RTD<-read.csv('New_RTD_Raw_data.csv')
+RTD_AGGR_NEW<-aggregate(.~GlobalDrinkingMoments+Global_DM.x+ï..Country+Brand_map_new,RTD,sum) 
+
+
+RTD_Aggr<-aggregate(.~ï..Global_DM.x,RTD, sum)
+TCB_Aggr<-aggregate(.~ï..Global_DM.x,TCB, sum)
+
+
+library(openxlsx)
+write.csv(RTD_AGGR_NEW,file='New_RTD_AGGR_NEW_brand.csv')
+write.csv(TCB_Aggr,file='TCB_Aggr.csv')
+
+rm(list=ls())
+install.packages("bigmemory")
+library(bigmemory)
+data<-read.big.matrix('GB_RAW.xlsx')
+head(data)
+getwd()
+
+###################### LDA ###############################################
+
+library(dplyr)
+library(MASS)
+rm(list=ls())
+
+set.seed(100)
+df1<-read.csv('Italy_Data_for_LDA_Workaholics.csv')
+df2<-df1[,-1]
+sample <- sample.int(n = nrow(df2), size = floor(.75*nrow(df2)), replace = F)
+train <- df2[sample, ]
+test  <- df2[-sample, ]
+
+
+model1lda<- lda(Workaholics~. ,data = train)
+
+prediction1lda<- model1lda%>% predict(test)
+
+test1 <- cbind(test,prediction1lda$class)
+
+table(test1$Workaholics,test1$`prediction1lda$class`)
+
+mean(prediction1lda$class==test1$Foodies)
+
+library(dplyr)
+library(MASS)
+set.seed(100)
+ind<- sample(2,nrow(basedf),replace = T,prob = c(0.7,0.3))
+traindata<-df1[ind==1,]
+testdata<-df1[ind==2,]
+model1lda<- lda(clustercut2~. ,data = traindata1)
+prediction1lda<- model1lda%>% predict(testdata1)
+testdata1 <- cbind(testdata1,prediction1lda$class)
+table(testdata1$clustercut2,testdata1$`prediction1lda$class`)
+mean(prediction1lda$class==testdata1$clustercut2)
+
+rm(list=ls())
+getwd()
+setwd("C:/Users/10920/Desktop/LDA")
+
+df<-read.csv('LDA_input_data_v.0.1.csv')
+
+
+## 75% of the sample size
+smp_size <- floor(0.75 * nrow(df))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(df)), size = smp_size)
+
+train <- df[train_ind, ]
+test <- df[-train_ind, ]
+
+library(MASS)
+Lda_out <- lda(formula = TSC10 ~ .,data = train)
+Lda_out$xlevels
+
+Lda_out
+lda.pred <- predict(Lda_out, test)
+
+df_out<-as.data.frame(table(lda.pred$class, test$TSC10))
+
+
+getAnywhere("predict.lda")
+
+
+
+
+
+plot(Lda_out)
+
+output<-as.data.frame(Lda_out)
+library(openxlsx)
+write.csv(df_out, "output.csv")
+
+################# Clustering ######################################
+
+Global_DM<-read.csv('Global_DM_propg.csv')
+
+library(RWeka)
+SimpleKMeans(Global_DM, control = NULL)
+DBScan(Global_DM, control = NULL)
+
+# installing/loading the latest installr package:
+install.packages("installr")
+library(installr) # install+load installr
+
+updateR() # updating R.
+library(fclust)
+library(ppclust)
+res.fcm <- fcm(Global_DM, centers=3)
+
+
+rm(list = ls())
+
+Global_DM<-read.csv('South Africa Golobal Dm.csv')
+
+library(cluster)
+library(dendextend)
+library(factoextra)
+
+d <- dist(Global_DM, method = "euclidean")
+res.hc <- hclust(d, method = "ward.D2" )
+
+plot(res.hc, cex = 0.6, hang = -1)
+
+grp <- cutree(res.hc, k = 9)
+table(grp)
+
+################################# Tree ##############################
+
+import numpy as np 
+import pandas as pd 
+from sklearn.metrics import confusion_matrix 
+from sklearn.cross_validation import train_test_split 
+from sklearn.tree import DecisionTreeClassifier 
+from sklearn.metrics import accuracy_score 
+from sklearn.metrics import classification_report
+
+# Function importing Dataset 
+def importdata(): 
+    Tree_data = pd.read_csv( 
+'https://archive.ics.uci.edu/ml/machine-learning-'+
+'databases/balance-scale/balance-scale.data', 
+    sep= ',', header = None) 
+      
+    # Printing the dataswet shape 
+    print ("Dataset Length: ", len(Tree_data)) 
+    print ("Dataset Shape: ", Tree_data.shape) 
+      
+    # Printing the dataset obseravtions 
+    print ("Dataset: ",Tree_data.head()) 
+    return Tree_data 
+
+# Function to split the dataset 
+def splitdataset(Tree_data): 
+  
+    # Seperating the target variable 
+    X = Tree_data.values[:, 1:5] 
+    Y = Tree_data.values[:, 0] 
+  
+    # Spliting the dataset into train and test 
+    X_train, X_test, y_train, y_test = train_test_split(  
+    X, Y, test_size = 0.3, random_state = 100) 
+      
+    return X, Y, X_train, X_test, y_train, y_test
+
+# Function to perform training with giniIndex. 
+def train_using_gini(X_train, X_test, y_train): 
+  
+    # Creating the classifier object 
+    clf_gini = DecisionTreeClassifier(criterion = "gini", 
+            random_state = 100,max_depth=3, min_samples_leaf=5) 
+  
+    # Performing training 
+    clf_gini.fit(X_train, y_train) 
+    return clf_gini 
+      
+# Function to perform training with entropy. 
+def tarin_using_entropy(X_train, X_test, y_train): 
+  
+    # Decision tree with entropy 
+    clf_entropy = DecisionTreeClassifier( 
+            criterion = "entropy", random_state = 100, 
+            max_depth = 3, min_samples_leaf = 5) 
+  
+    # Performing training 
+    clf_entropy.fit(X_train, y_train) 
+    return clf_entropy 
+
+# Function to make predictions 
+def prediction(X_test, clf_object): 
+  
+    # Predicton on test with giniIndex 
+    y_pred = clf_object.predict(X_test) 
+    print("Predicted values:") 
+    print(y_pred) 
+    return y_pred 
+      
+# Function to calculate accuracy 
+def cal_accuracy(y_test, y_pred): 
+      
+    print("Confusion Matrix: ", 
+        confusion_matrix(y_test, y_pred)) 
+      
+    print ("Accuracy : ", 
+    accuracy_score(y_test,y_pred)*100) 
+      
+    print("Report : ", 
+    classification_report(y_test, y_pred)) 
+
+# Driver code 
+def main(): 
+      
+    # Building Phase 
+    data = importdata() 
+    X, Y, X_train, X_test, y_train, y_test = splitdataset(data) 
+    clf_gini = train_using_gini(X_train, X_test, y_train) 
+    clf_entropy = tarin_using_entropy(X_train, X_test, y_train) 
+      
+    # Operational Phase 
+    print("Results Using Gini Index:") 
+      
+    # Prediction using gini 
+    y_pred_gini = prediction(X_test, clf_gini) 
+    cal_accuracy(y_test, y_pred_gini) 
+      
+    print("Results Using Entropy:") 
+    # Prediction using entropy 
+    y_pred_entropy = prediction(X_test, clf_entropy) 
+    cal_accuracy(y_test, y_pred_entropy) 
+      
+      
+# Calling main function 
+if __name__=="__main__":main() 
+
+data=importdata()
+data.shape
+
+X = data.values[:, 1:5] 
+
+X.shape
+
+Y = data.values[:, 0] 
+
+########################################### Sandc #########################################
+
+# Installing the required packages
+
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(mice)
+library(lattice)
+library(reshape2)
+library(DescTools)
+library(gmodels)
+library(dplyr)
+library(gtools)
+library(xlsx)
+
+
+setwd("//home//fb_user//BGS_EWI//Delta_Decrease//Four")
+
+Delta_Decrease<-read.xlsx("Pepsi & Coke 17 Metrics.xlsx",1)
+
+# Converting to factors
+
+Delta_Decrease$Share<-as.factor(Delta_Decrease$Share)
+
+#Relevlling the CC_share
+Delta_Decrease$Share2<-relevel(Delta_Decrease$Share,ref="0")
+
+#Getting the column Names
+write.csv(colnames(Delta_Decrease),"Col_Delta.csv")
+
+#Index file to maintain the list of logistic regression
+Index <- data.frame(Model.name = as.character(),
+                    Significant_values = as.double(),
+                    PseudoR2 = as.double(),
+                    Variable1 = as.character(),
+                    Variable2 = as.character(),
+                    Variable3 = as.character(),
+                    Variable4 = as.character(),
+                    Variable1_significance=as.double(),
+                    Variable2_significance=as.double(),
+                    Variable3_significance=as.double(),
+                    Variable4_significance=as.double(),
+                    Variable1_coefficient=as.double(),
+                    Variable2_coefficient=as.double(),
+                    Variable3_coefficient=as.double(),
+                    Variable4_coefficient=as.double(),
+                    stringsAsFactors = FALSE)
+
+# Creating combination variable
+
+Combi <- combinations(17,4)
+
+# logistic regression in loop
+
+for (i in 1:nrow(Combi))
+{
+  #Selecting the required metrics
+  Delta_input_decc<- Delta_Decrease %>% select(Combi[i,],19)
+  
+  #Run logistic regression
+  assign(paste0("log.model_decc_", i),glm(Delta_input_decc$Share2 ~., data=Delta_input_decc,  family = binomial(link = "logit")))
+  
+  #Save the summary of the logistic regression
+  Delta_decc_Summary<-summary(get(paste0("log.model_decc_", i)))
+  
+  # Saving the Pseudo R2
+  Delta_decc_Pseudor2<-PseudoR2(get(paste0("log.model_decc_", i)), which = "McFaddenAdj")
+  
+  #Counting significant values
+  Signi <- sum(Delta_decc_Summary$coefficients[,4][-1]<=0.2)
+  
+  #Creating index file of the iterations
+  Index[i,] <- c(paste0("log.model_decc_",i), Signi, round(unname(Delta_decc_Pseudor2),4), 
+                 colnames(Delta_input_decc)[1:4],
+                 round(unname(Delta_decc_Summary$coefficients[,4][-1]),3),round(unname(Delta_decc_Summary$coefficients[,1][-1]),3)) 
+  
+  write.csv(Index, "Index_Delta_dec_Pepsi_four.csv")
+  
+  }
+
+################################## CA ############################################################
+
+library(foreign)
+install.packages("ca")
+library(ca)
+data<-read.csv('correspond_2.csv')
+data1<-data[,-1]
+rowcord <- ca(data1,nd=2)$rowcoord
+colcord <- ca(data1,nd=2)$colcoord
+rowcolcord <-rbind(rowcord,colcord)
+write.csv(rowcolcord,file='output_test_1.csv')
+head(data)
+class(data$To.Comfort.Me)
+str(data)
+
+############################## ROC ###############################
+
+library(foreign)
+data<-data.frame(read.spss("C:\\Users\\10920\\Desktop\\Main_Only_With_BFactors_Demogs_To Client_With_Brands_20180119.sav",to.data.frame=TRUE))
+library(dplyr)
+data_GB<-data.frame(filter(data, Country=="Great Britain"))
+head(data_GB)
+write.csv(data_GB,'Gb.csv')
+
+
+
+df<-read.csv('Gb_cors_data.csv')
+reg1<- glm(CatCons~q12a01 + q12a04 + q12a05 + q12a06 + q12a12 + q12a13 + q12a14 + q12a15 + q12a16 + q12a17 + q12a18 + q12a24 + q12a25 + q12a27 + q12a29 + q12a31 + q12a32 + q12a34 + q12a35 + q12a36 + q12a39 + q12a40 + q12a42 + q12a45 + q12a49 + q12a50 + q12a51 + q12a53 + q12a55 + q12a57 + q12a60 + q12a63 + q12a64 + q12a67 + q12a69 + q12a72 + q12a73,family = binomial(link='logit'),data = df)
+summary(reg1)
+predict0 <- data.frame(predict(reg1, type = c('response')))
+
+predict0[predict0>0.555]<-1
+predict0[predict0<=0.555]<-0
+sum(predict0$predict.reg1..type...c..response...)
+library(pROC)
+levels(predict0$predict.reg1..type...c..response...)
+plot(roc(predict0$predict.reg1..type...c..response..., reg1), print.auc = TRUE)
+
+
+roc(df$CatCons, as.vector(fitted.values(reg1)), percent=F,   boot.n=1000, ci.alpha=0.9, stratified=FALSE, plot=TRUE, grid=TRUE, show.thres=TRUE, legacy.axes = TRUE, reuse.auc = TRUE,
+    # print.thres = c(0.30,0.35, 0.40, 0.45,0.48, 0.50,0.55, 0.60),#
+    print.auc = TRUE, print.thres.col = "blue", ci=TRUE, ci.type="bars", print.thres.cex = 0.7, main = paste("ROC curve using","(N = ",nrow(df),")") )
+
+write.csv(summary.glm(reg1)$coefficients,'res_cat_1.csv')
